@@ -1,0 +1,81 @@
+---
+- name: Get Ontapi version
+  na_ontap_gather_facts:
+    state: info
+    hostname: "{{ hostname }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    https: true
+    ontapi: 32
+    validate_certs: false
+- name: Delete CIFS Server
+  na_ontap_cifs_server:
+    state: absent
+    vserver: "{{ vserver }}"
+    cifs_server_name: "{{ item }}"
+    #admin_password: "{{ item.admin_password }}"
+    #admin_user_name: "{{ item.admin_user_name }}"
+    hostname: "{{ hostname }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    ontapi: "{{ ontap_facts.ontap_version }}"
+    https: true
+    validate_certs: false
+  with_items: "{{ ontap_facts.cifs_info }}"
+  when: 
+    - ontap_facts.cifs_info != '' 
+    #- ontap_facts.cifs_info[item].vserver  ==  vserver
+- name: Delete SnapMirror(s)
+  na_ontap_snapmirror:
+    state: absent
+    destination_path: "{{ ontap_facts.snapmirror_info[item].destination_location }}"
+    #source_vserver: "{{ vserver }}"
+    #source_volume: "{{ item }}"
+    source_hostname: "{{ hostname }}"
+    hostname: "{{ hostname }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    ontapi: "{{ ontap_facts.ontap_version }}"
+    https: true
+    validate_certs: false
+  with_items: "{{ ontap_facts.snapmirror_info }}"
+  when:
+    - ontap_facts.snapmirror_info[item].source_vserver == vserver
+- name: Delete Interface(s)
+  na_ontap_interface:
+    state: absent
+    interface_name: "{{ item}}"
+    vserver: "{{ vserver }}"
+    hostname: "{{ hostname }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    ontapi: "{{ ontap_facts.ontap_version }}"
+    https: true
+    validate_certs: false
+  with_items: "{{ ontap_facts.net_interface_info }}"
+  when:  ontap_facts.net_interface_info[item].vserver  ==  vserver
+- name: Delete Volume(s)
+  na_ontap_volume:
+    state: absent
+    name: "{{ ontap_facts.volume_info[item].volume_id_attributes.name }}"
+    vserver: "{{ vserver }}"
+    hostname: "{{ hostname }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    ontapi: "{{ ontap_facts.ontap_version }}"
+    https: true
+    validate_certs: false
+  with_items: "{{ ontap_facts.volume_info }}"
+  when:  
+    - ontap_facts.volume_info[item].volume_id_attributes.owning_vserver_name  ==  vserver
+    - ontap_facts.volume_info[item].volume_id_attributes.name is not search("root")
+- name: Delete Vserver
+  na_ontap_svm:
+    state: absent
+    name: "{{ vserver }}"
+    hostname: "{{ hostname }}"
+    username: "{{ username }}"
+    password: "{{ password }}"
+    ontapi: "{{ ontap_facts.ontap_version }}"
+    https: true
+    validate_certs: false
